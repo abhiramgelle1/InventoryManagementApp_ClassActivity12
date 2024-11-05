@@ -1,4 +1,4 @@
-package com.example.act12_inventory_app
+package com.inventory.act12.mad2
 
 import io.flutter.embedding.android.FlutterActivity
 

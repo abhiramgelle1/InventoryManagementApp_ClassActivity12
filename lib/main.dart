@@ -44,11 +44,24 @@ class InventoryHomePage extends StatefulWidget {
 }
 
 class _InventoryHomePageState extends State<InventoryHomePage> {
+  final CollectionReference inventory =
+      FirebaseFirestore.instance.collection('inventory');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Inventory Management'),
+        actions: [
+          PopupMenuButton(
+            icon: Icon(Icons.more_vert),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'help', child: Text('Help')),
+            ],
+            onSelected: (value) {},
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -63,57 +76,200 @@ class _InventoryHomePageState extends State<InventoryHomePage> {
                   ),
             ),
             Expanded(
-              child: ListView(
-                children: <Widget>[
-                  Card(
-                    elevation: 4,
-                    margin: EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              child: StreamBuilder(
+                stream: inventory.snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                  if (!snapshot.hasData) return CircularProgressIndicator();
+                  return GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 3 / 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
                     ),
-                    child: ListTile(
-                      title: Text(
-                        'Sample Item',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        'Quantity: 10',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                  ),
-                  // Add more cards for other items
-                ],
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      var document = snapshot.data!.docs[index];
+                      return Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                document['name'],
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Quantity: ${document['quantity']}',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit,
+                                        color: Colors.tealAccent),
+                                    onPressed: () => _editItem(document),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.delete,
+                                        color: Colors.redAccent),
+                                    onPressed: () => _deleteItem(document.id),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add item functionality here
-        },
+        onPressed: _addItem,
         child: Icon(Icons.add, color: Colors.black),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Card(
-          color: Color(0xFF1C1C1E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Center(
-              child: Text(
-                'Abhiram Gelle\nPanther ID: 002843022',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-          ),
-        ),
-      ),
+      // bottomNavigationBar: Padding(
+      //   padding: const EdgeInsets.all(16.0),
+      //   child: Card(
+      //     color: Color(0xFF1C1C1E),
+      //     shape: RoundedRectangleBorder(
+      //       borderRadius: BorderRadius.circular(8),
+      //     ),
+      //     child: Padding(
+      //       padding: const EdgeInsets.all(12.0),
+      //       child: Center(
+      //         child: Text(
+      //           'Abhiram Gelle\nPanther ID: 002843022',
+      //           textAlign: TextAlign.center,
+      //           style: TextStyle(color: Colors.white70),
+      //         ),
+      //       ),
+      //     ),
+      //   ),
+      // ),
     );
+  }
+
+  void _addItem() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String name = '';
+        String quantity = '';
+        return AlertDialog(
+          title: Text('Add Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: InputDecoration(labelText: 'Item Name'),
+                onChanged: (value) => name = value,
+              ),
+              TextField(
+                decoration: InputDecoration(labelText: 'Quantity'),
+                keyboardType: TextInputType.number,
+                onChanged: (value) => quantity = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (name.isNotEmpty && quantity.isNotEmpty) {
+                  try {
+                    await inventory
+                        .add({'name': name, 'quantity': int.parse(quantity)});
+                  } catch (e) {
+                    print("Error adding item: $e");
+                  }
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editItem(QueryDocumentSnapshot document) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String name = document['name'];
+        String quantity = document['quantity'].toString();
+        return AlertDialog(
+          title: Text('Edit Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: InputDecoration(labelText: 'Item Name'),
+                onChanged: (value) => name = value,
+                controller: TextEditingController(text: name),
+              ),
+              TextField(
+                decoration: InputDecoration(labelText: 'Quantity'),
+                keyboardType: TextInputType.number,
+                onChanged: (value) => quantity = value,
+                controller: TextEditingController(text: quantity),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (name.isNotEmpty && quantity.isNotEmpty) {
+                  try {
+                    await inventory.doc(document.id).update(
+                        {'name': name, 'quantity': int.parse(quantity)});
+                  } catch (e) {
+                    print("Error updating item: $e");
+                  }
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteItem(String id) async {
+    try {
+      await inventory.doc(id).delete();
+    } catch (e) {
+      print("Error deleting item: $e");
+    }
   }
 }
