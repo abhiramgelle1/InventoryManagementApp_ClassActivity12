@@ -14,16 +14,16 @@ class InventoryApp extends StatelessWidget {
     return MaterialApp(
       title: 'Inventory Management App',
       theme: ThemeData(
-        brightness: Brightness.dark, // Set dark theme
-        primaryColor: Colors.tealAccent, // Accent color
+        brightness: Brightness.dark,
+        primaryColor: Colors.tealAccent,
         scaffoldBackgroundColor: Colors.black,
-        cardColor: Color(0xFF1C1C1E), // Dark card color
+        cardColor: Color(0xFF1C1C1E),
         textTheme: TextTheme(
           bodyLarge: TextStyle(color: Colors.white),
           bodyMedium: TextStyle(color: Colors.white70),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: Color(0xFF121212), // Darker shade for app bar
+          backgroundColor: Color(0xFF121212),
           titleTextStyle: TextStyle(
             color: Colors.tealAccent,
             fontWeight: FontWeight.bold,
